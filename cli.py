@@ -4,13 +4,10 @@
 
 import collections
 import difflib
-import logging
 import operator
 import sys
 
 import ads
-
-logging.basicConfig(format="%(asctime)s %(message)s",level=logging.INFO)
 
 
 def recommend_references(bibcode, num=3, ratio=0.5):
@@ -42,10 +39,8 @@ def recommend_references(bibcode, num=3, ratio=0.5):
         Article bibcodes that probably should have been cited.
     """
 
-
     # OK I have used crazy variable names for "humans" because this is otherwise
     # a conceptually annoying problem.
-
     num = int(num)
     if 1 > num:
         raise ValueError("number of requested articles must be a a positive integer")
@@ -60,13 +55,13 @@ def recommend_references(bibcode, num=3, ratio=0.5):
     except:
         raise ValueError("could not find original article with bibcode {0}".format(bibcode))
 
-    logging.debug("Article has bibcode, title: {0} {1}".format(
-        original_article.bibcode, original_article.title))
+    #logging.debug("Article has bibcode, title: {0} {1}".format(
+    #    original_article.bibcode, original_article.title))
 
     # Find all the citations that the paper made
     articles_i_cited = list(original_article.references)
 
-    logging.debug("This article cited {0} papers".format(len(articles_i_cited)))
+    #logging.debug("This article cited {0} papers".format(len(articles_i_cited)))
 
     bibcodes_of_articles_i_cited = [each.bibcode for each in articles_i_cited]
 
@@ -100,18 +95,13 @@ def recommend_references(bibcode, num=3, ratio=0.5):
         this_author = article.author[0].lower().replace(".", "")
 
         if difflib.SequenceMatcher(a=this_author, b=original_author).ratio() > ratio:
-            # Same same
+            # Same author as the original one, so let's ignore it.
             continue
 
         else:
             recommended_bibcodes.append(bibcode)
             if len(recommended_bibcodes) == num:
                 break
-
-    for bibcode in recommended_bibcodes:
-        article = list(ads.query(bibcode))[0]
-        logging.debug("Recommend this paper: {0} by {1} at {2}".format(
-            article.title, article.author[0], article.url))
 
     return recommended_bibcodes
 
@@ -121,21 +111,6 @@ if __name__ == "__main__":
     # citation-buddy bibtex_code
     # bibtex_code = 2014MNRAS.443..828C
 
-
-    # one paper
-    # One paper has a bunch of citations
-    # We want to know who else we should cite
-
-    # OK< so basically we want to know *which* papers also cite the papers we cite,
-    # and then from those papers which papers they cite that we don't.
-
-
-    # ^^^^^^^ cited papers
-
-    # ^^^^^^^^^^ who else cited those papers
-
-    # ^^^^^^^^^^^^^^^ papers that those papers cited that you haven't.
-
     # STEPS
     # (1) Find all the citations that the paper made
     # (2) Go to all of those papers, and find out who else cited those papers
@@ -143,4 +118,11 @@ if __name__ == "__main__":
     #     you didn't. Count the frequency and find the highest ones
 
     if len(sys.argv) > 1:
-        recommend_references(sys.argv[1:])
+        bibcodes = recommend_references(sys.argv[1])
+
+        for bibcode in bibcodes:
+
+            article = list(ads.query(bibcode))[0]
+            et_al = ["", " et al"][len(article.author) > 1]
+            print("I recommend this paper: {0} by {1}{2} at {3}".format(
+                article.title[0], article.author[0], et_al, article.url))
